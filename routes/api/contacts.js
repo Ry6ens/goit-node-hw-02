@@ -1,81 +1,37 @@
 const express = require("express");
-const Joi = require("joi");
 
-const contacts = require("../../models/contacts.js");
-const { RequestError } = require("../../helpers/RequestError");
+const ctrl = require("../../controllers/contacts");
+const { ctrlWrapper } = require("../../helpers");
+const {
+  validateBody,
+  isValidId,
+  isFavoriteValid,
+} = require("../../middlewares");
+
+const { schemas } = require("../../models/contact");
 
 const router = express.Router();
 
-const contactsAddSchema = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().required(),
-  phone: Joi.string().required(),
-});
+router.get("/", ctrlWrapper(ctrl.listContacts));
 
-router.get("/", async (req, res, next) => {
-  try {
-    const result = await contacts.listContacts();
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get("/:contactId", isValidId, ctrlWrapper(ctrl.getContactById));
 
-router.get("/:contactId", async (req, res, next) => {
-  try {
-    const { contactId } = req.params;
-    const result = await contacts.getContactById(contactId);
-    if (!result) {
-      throw RequestError(404);
-    }
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+router.post("/", validateBody(schemas.addSchema), ctrlWrapper(ctrl.addContact));
 
-router.post("/", async (req, res, next) => {
-  try {
-    const { error } = contactsAddSchema.validate(req.body);
-    if (error) {
-      throw RequestError(400, error.message);
-    }
-    const { name, email, phone } = req.body;
-    const result = await contacts.addContact(name, email, phone);
-    res.status(201).json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+router.delete("/:contactId", isValidId, ctrlWrapper(ctrl.removeContact));
 
-router.delete("/:contactId", async (req, res, next) => {
-  try {
-    const { contactId } = req.params;
-    const result = await contacts.removeContact(contactId);
-    if (!result) {
-      throw RequestError(404);
-    }
-    res.json({ message: "Contact Deleted" });
-  } catch (error) {
-    next(error);
-  }
-});
+router.put(
+  "/:contactId",
+  validateBody(schemas.addSchema),
+  ctrlWrapper(ctrl.updateContactById)
+);
 
-router.put("/:contactId", async (req, res, next) => {
-  try {
-    const { error } = contactsAddSchema.validate(req.body);
-    if (error) {
-      throw RequestError(400, error.message);
-    }
-    const { contactId } = req.params;
-    const result = await contacts.updateContactById(contactId, req.body);
-    if (!result) {
-      throw RequestError(404);
-    }
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+router.patch(
+  "/:contactId/favorite",
+  isFavoriteValid,
+  isValidId,
+  validateBody(schemas.updateStatusContactSchema),
+  ctrlWrapper(ctrl.updateStatusContact)
+);
 
 module.exports = router;
