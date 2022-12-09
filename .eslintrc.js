@@ -10,5 +10,6 @@ module.exports = {
   },
   rules: {
     "no-useless-escape": "off",
+    "no-console": "warn",
   },
 };
